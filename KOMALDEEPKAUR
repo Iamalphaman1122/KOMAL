@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Hotel Management System</title>
+<style>
+:root{--primary:#2c3e50;--accent:#27ae60;}
+body{font-family:Arial;margin:0;background:#f0f3f5;}
+header{background:var(--primary);color:#fff;padding:15px;text-align:center;}
+.container{padding:15px;max-width:1200px;margin:auto;}
+.card{background:#fff;padding:15px;margin:10px 0;border-radius:12px;box-shadow:0 3px 8px rgba(0,0,0,.1);} 
+input,select,button{padding:10px;margin:5px;border-radius:6px;border:1px solid #ccc;}
+button{background:var(--accent);color:#fff;border:none;cursor:pointer;}
+button:hover{opacity:.9}
+.delete{background:#e74c3c}
+.edit{background:#f39c12}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+th,td{border:1px solid #ddd;padding:8px;text-align:center}
+.dashboard{display:flex;gap:10px;flex-wrap:wrap}
+.stat{flex:1;background:#3498db;color:#fff;padding:15px;border-radius:10px;text-align:center}
+.hidden{display:none}
+@media(max-width:600px){table,thead,tbody,th,td,tr{display:block}td{border:none;border-bottom:1px solid #eee}}
+</style>
+</head>
+<body>
+
+<header><h1>Hotel Management System PRO</h1></header>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div id="loginSection" class="card">
+<h2>Login</h2>
+<input id="username" placeholder="Username">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p>admin / 1234</p>
+</div>
+
+<!-- APP -->
+<div id="appSection" class="hidden">
+
+<div class="dashboard">
+<div class="stat">Bookings: <span id="totalBookings"></span></div>
+<div class="stat">Revenue: ₹<span id="totalRevenue"></span></div>
+</div>
+
+<div class="card">
+<h2>Book Room</h2>
+<input id="name" placeholder="Guest Name">
+<select id="roomType">
+<option>Single</option>
+<option>Double</option>
+<option>Suite</option>
+</select>
+<input type="date" id="checkin">
+<input type="date" id="checkout">
+<button onclick="addBooking()">Add</button>
+</div>
+
+<div class="card">
+<h2>Search</h2>
+<input id="search" placeholder="Search name" onkeyup="searchBooking()">
+</div>
+
+<div class="card">
+<h2>Bookings</h2>
+<table>
+<thead>
+<tr><th>Name</th><th>Room</th><th>Check-In</th><th>Check-Out</th><th>Total</th><th>Action</th></tr>
+</thead>
+<tbody id="bookingTable"></tbody>
+</table>
+</div>
+
+</div>
+</div>
+
+<script>
+let bookings = JSON.parse(localStorage.getItem("bookings"))||[];
+let editIndex = -1;
+
+function login(){
+if(username.value=="admin"&&password.value=="1234"){
+loginSection.classList.add("hidden");
+appSection.classList.remove("hidden");
+displayBookings();updateDashboard();
+}else alert("Wrong login");
+}
+
+function calcDays(inDate,outDate){
+return Math.ceil((new Date(outDate)-new Date(inDate))/(1000*60*60*24));
+}
+
+function calculateCost(type,days){
+let rate={Single:1000,Double:2000,Suite:3000};
+return rate[type]*days;
+}
+
+function addBooking(){
+let nameV=name.value,room=roomType.value,inD=checkin.value,outD=checkout.value;
+if(!nameV||!inD||!outD) return alert("Fill all fields");
+
+let days=calcDays(inD,outD);
+if(days<=0) return alert("Invalid dates");
+
+let total=calculateCost(room,days);
+
+if(editIndex===-1){
+bookings.push({name:nameV,room,inD,outD,total});
+}else{
+bookings[editIndex]={name:nameV,room,inD,outD,total};
+editIndex=-1;
+}
+
+save();displayBookings();updateDashboard();clearForm();
+}
+
+function displayBookings(data=bookings){
+bookingTable.innerHTML="";
+data.forEach((b,i)=>{
+bookingTable.innerHTML+=`<tr>
+<td>${b.name}</td>
+<td>${b.room}</td>
+<td>${b.inD}</td>
+<td>${b.outD}</td>
+<td>₹${b.total}</td>
+<td>
+<button class='edit' onclick='editBooking(${i})'>Edit</button>
+<button class='delete' onclick='deleteBooking(${i})'>Delete</button>
+<button onclick='printBill(${i})'>Bill</button>
+</td>
+</tr>`;
+});
+}
+
+function editBooking(i){
+let b=bookings[i];
+name.value=b.name;roomType.value=b.room;checkin.value=b.inD;checkout.value=b.outD;
+editIndex=i;
+}
+
+function deleteBooking(i){
+bookings.splice(i,1);save();displayBookings();updateDashboard();
+}
+
+function searchBooking(){
+let t=search.value.toLowerCase();
+displayBookings(bookings.filter(b=>b.name.toLowerCase().includes(t)));
+}
+
+function updateDashboard(){
+totalBookings.innerText=bookings.length;
+totalRevenue.innerText=bookings.reduce((s,b)=>s+b.total,0);
+}
+
+function save(){localStorage.setItem("bookings",JSON.stringify(bookings));}
+
+function clearForm(){name.value="";checkin.value="";checkout.value="";}
+
+function printBill(i){
+let b=bookings[i];
+let w=window.open();
+w.document.write(`<h2>Hotel Invoice</h2>
+<p>Name: ${b.name}</p>
+<p>Room: ${b.room}</p>
+<p>Check-In: ${b.inD}</p>
+<p>Check-Out: ${b.outD}</p>
+<h3>Total: ₹${b.total}</h3>`);
+w.print();
+}
+</script>
+
+</body>
+</html>
